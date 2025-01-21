@@ -1,4 +1,4 @@
-import { IconArrowRight } from '@posthog/icons'
+import { IconArrowRight, IconStopFilled } from '@posthog/icons'
 import { LemonButton, LemonTextArea } from '@posthog/lemon-ui'
 import clsx from 'clsx'
 import { useActions, useValues } from 'kea'
@@ -8,7 +8,7 @@ import { maxLogic } from './maxLogic'
 
 export function QuestionInput(): JSX.Element {
     const { question, threadGrouped, threadLoading, inputDisabled, submissionDisabledReason } = useValues(maxLogic)
-    const { askMax, setQuestion } = useActions(maxLogic)
+    const { askMax, stopMax, setQuestion } = useActions(maxLogic)
 
     const textAreaRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -34,7 +34,7 @@ export function QuestionInput(): JSX.Element {
                 onChange={(value) => setQuestion(value)}
                 placeholder={threadLoading ? 'Thinking…' : isFloating ? 'Ask follow-up' : 'Ask away'}
                 onPressEnter={() => {
-                    if (question) {
+                    if (!threadLoading && !submissionDisabledReason && question) {
                         askMax(question)
                     }
                 }}
@@ -46,11 +46,17 @@ export function QuestionInput(): JSX.Element {
             <div className={clsx('absolute top-0 bottom-0 flex items-center', isFloating ? 'right-3' : 'right-2')}>
                 <LemonButton
                     type={isFloating && !question ? 'secondary' : 'primary'}
-                    onClick={() => askMax(question)}
-                    tooltip="Let's go!"
-                    disabledReason={submissionDisabledReason}
+                    onClick={() => {
+                        if (threadLoading) {
+                            stopMax()
+                        } else {
+                            askMax(question)
+                        }
+                    }}
+                    tooltip={threadLoading ? "Let's bail" : "Let's go!"}
+                    disabledReason={!threadLoading && submissionDisabledReason}
                     size="small"
-                    icon={<IconArrowRight />}
+                    icon={threadLoading ? <IconStopFilled /> : <IconArrowRight />}
                 />
             </div>
         </div>

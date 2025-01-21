@@ -1,6 +1,5 @@
 import { captureException } from '@sentry/react'
 import { shuffle } from 'd3'
-import { createParser } from 'eventsource-parser'
 import { actions, afterMount, connect, kea, key, listeners, path, props, reducers, selectors } from 'kea'
 import { loaders } from 'kea-loaders'
 import api, { ApiError } from 'lib/api'
@@ -49,6 +48,7 @@ export const maxLogic = kea<maxLogicType>([
     }),
     actions({
         askMax: (prompt: string) => ({ prompt }),
+        stopMax: true,
         setThreadLoaded: (testOnlyOverride = false) => ({ testOnlyOverride }),
         addMessage: (message: ThreadMessage) => ({ message }),
         replaceMessage: (index: number, message: ThreadMessage) => ({ index, message }),
@@ -98,6 +98,7 @@ export const maxLogic = kea<maxLogicType>([
             false,
             {
                 askMax: () => true,
+                stopMax: () => false,
                 setThreadLoaded: (_, { testOnlyOverride }) => testOnlyOverride,
             },
         ],
@@ -125,7 +126,7 @@ export const maxLogic = kea<maxLogicType>([
             },
         ],
     }),
-    listeners(({ actions, values }) => ({
+    listeners(({ cache, actions, values }) => ({
         [projectLogic.actionTypes.updateCurrentProjectSuccess]: ({ payload }) => {
             // Load suggestions anew after product description is changed on the project
             // Most important when description is set for the first time, but also when updated,
@@ -164,21 +165,14 @@ export const maxLogic = kea<maxLogicType>([
         },
         askMax: async ({ prompt }) => {
             actions.addMessage({ type: AssistantMessageType.Human, content: prompt, status: 'completed' })
+            cache.eventSourceController = new AbortController()
             try {
-                const response = await api.conversations.create({
-                    content: prompt,
-                    conversation: values.conversation?.id,
-                })
-                const reader = response.body?.getReader()
-
-                if (!reader) {
-                    return
-                }
-
-                const decoder = new TextDecoder()
-
-                const parser = createParser({
-                    onEvent: ({ data, event }) => {
+                await api.conversations.stream({
+                    data: {
+                        content: prompt,
+                        conversation: values.conversation?.id,
+                    },
+                    onMessage: ({ data, event }) => {
                         if (event === AssistantEventType.Message) {
                             const parsedResponse = parseResponse<RootAssistantMessage>(data)
                             if (!parsedResponse) {
@@ -218,15 +212,8 @@ export const maxLogic = kea<maxLogicType>([
                             actions.setConversation(parsedResponse)
                         }
                     },
+                    signal: cache.eventSourceController.signal,
                 })
-
-                while (true) {
-                    const { done, value } = await reader.read()
-                    parser.feed(decoder.decode(value))
-                    if (done) {
-                        break
-                    }
-                }
             } catch (e) {
                 const relevantErrorMessage = { ...FAILURE_MESSAGE, id: uuid() } // Generic message by default
                 if (e instanceof ApiError && e.status === 429) {
@@ -243,6 +230,9 @@ export const maxLogic = kea<maxLogicType>([
             }
 
             actions.setThreadLoaded()
+        },
+        stopMax: () => {
+            cache.eventSourceController?.abort()
         },
         retryLastMessage: () => {
             const lastMessage = values.threadRaw.filter(isHumanMessage).pop() as HumanMessage | undefined
@@ -329,16 +319,14 @@ export const maxLogic = kea<maxLogicType>([
         ],
         inputDisabled: [(s) => [s.formPending], (formPending) => formPending],
         submissionDisabledReason: [
-            (s) => [s.formPending, s.dataProcessingAccepted, s.question, s.threadLoading],
-            (formPending, dataProcessingAccepted, question, threadLoading): string | undefined =>
+            (s) => [s.formPending, s.dataProcessingAccepted, s.question],
+            (formPending, dataProcessingAccepted, question): string | undefined =>
                 !dataProcessingAccepted
                     ? 'Please accept OpenAI processing data'
                     : formPending
                     ? 'Please choose one of the options above'
                     : !question
                     ? 'I need some input first'
-                    : threadLoading
-                    ? 'Thinking…'
                     : undefined,
         ],
     }),

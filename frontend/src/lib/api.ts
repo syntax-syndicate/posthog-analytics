@@ -1,3 +1,4 @@
+import { EventSourceMessage, fetchEventSource } from '@microsoft/fetch-event-source'
 import { decompressSync, strFromU8 } from 'fflate'
 import { encodeParams } from 'kea-router'
 import { ActivityLogProps } from 'lib/components/ActivityLog/ActivityLog'
@@ -2656,8 +2657,29 @@ const api = {
     },
 
     conversations: {
-        async create(data: { content: string; conversation?: string | null }): Promise<Response> {
-            return api.createResponse(new ApiRequest().conversations().assembleFullUrl(), data)
+        async stream({
+            data,
+            onMessage,
+            onError,
+            signal,
+        }: {
+            data: { content: string; conversation?: string | null }
+            onMessage: (message: EventSourceMessage) => void
+            onError?: (error: any) => void
+            signal?: AbortSignal
+        }): Promise<void> {
+            await fetchEventSource(new ApiRequest().conversations().assembleFullUrl(true), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie(CSRF_COOKIE_NAME) || '',
+                    ...(getSessionId() ? { 'X-POSTHOG-SESSION-ID': getSessionId() } : {}),
+                },
+                body: JSON.stringify(data),
+                onmessage: onMessage,
+                onerror: onError,
+                signal,
+            })
         },
     },
 
