@@ -82,9 +82,7 @@ class RootNode(AssistantNode):
     def _model(self):
         # Research suggests temperature is not _massively_ correlated with creativity, hence even in this very
         # conversational context we're using a temperature of 0, for near determinism (https://arxiv.org/html/2405.00492v1)
-        return ChatOpenAI(
-            model="gpt-4o", temperature=0.0, streaming=True, stream_usage=True, parallel_tool_calls=False
-        ).bind_tools([retrieve_data_for_question])
+        return ChatOpenAI(model="o3-mini", streaming=True, stream_usage=True).bind_tools([retrieve_data_for_question])
 
     def _construct_messages(self, state: AssistantState) -> list[BaseMessage]:
         history: list[BaseMessage] = []
