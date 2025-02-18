@@ -436,8 +436,9 @@ export const pipelineBatchExportConfigurationLogic = kea<pipelineBatchExportConf
     actions({
         setSavedConfiguration: (configuration: Record<string, any>) => ({ configuration }),
         setSelectedModel: (model: string) => ({ model }),
+        setRunningStep: (step: number) => ({ step }),
     }),
-    loaders(({ props, actions }) => ({
+    loaders(({ props, actions, values }) => ({
         batchExportConfig: [
             null as BatchExportConfiguration | null,
             {
@@ -488,6 +489,51 @@ export const pipelineBatchExportConfigurationLogic = kea<pipelineBatchExportConf
                     )
                     lemonToast.success('Batch export created successfully')
                     return res
+                },
+            },
+        ],
+        batchExportConfigTest: [
+            null as BatchExportConfigurationTest | null,
+            {
+                loadBatchExportConfigTest: async () => {
+                    if (props.service) {
+                        return await api.batchExports.test(props.service)
+                    }
+                    return null
+                },
+            },
+        ],
+        batchExportConfigTestStep: [
+            null as BatchExportConfigurationTestStep | null,
+            {
+                runBatchExportConfigTestStep: async (step) => {
+                    actions.setRunningStep(step)
+                    const {
+                        name,
+                        destination,
+                        interval,
+                        paused,
+                        created_at,
+                        start_at,
+                        end_at,
+                        model,
+                        filters,
+                        ...config
+                    } = values.configuration
+                    const destinationObj = {
+                        type: destination,
+                        config: config,
+                    }
+                    const data: Partial<BatchExportConfiguration> = {
+                        paused,
+                        name,
+                        interval,
+                        model,
+                        filters,
+                        destination: destinationObj,
+                    }
+
+                    return await api.batchExports.runTestStep(step, data)
                 },
             },
         ],
@@ -571,6 +617,12 @@ export const pipelineBatchExportConfigurationLogic = kea<pipelineBatchExportConf
                 },
             },
         ],
+        runningStep: [
+            null as number | null,
+            {
+                setRunningStep: (_, { step }) => step,
+            },
+        ],
     })),
     selectors(() => ({
         service: [(s, p) => [s.batchExportConfig, p.service], (config, service) => config?.destination.type || service],
@@ -645,6 +697,30 @@ export const pipelineBatchExportConfigurationLogic = kea<pipelineBatchExportConf
                 .findMounted({ types: DESTINATION_TYPES })
                 ?.actions.updateBatchExportConfig(batchExportConfig)
         },
+        runBatchExportConfigTestStepSuccess: ({ step }) => {
+            if (!step) {
+                step = values.batchExportConfigTestStep
+            }
+
+            const index = values.batchExportConfigTest.steps.findIndex((item) => item.name === step.name)
+
+            if (index > -1) {
+                values.batchExportConfigTest.steps[index] = step
+
+                if (step.result.status === 'Passed' && index < values.batchExportConfigTest.steps.length - 1) {
+                    actions.runBatchExportConfigTestStep(index + 1)
+                } else {
+                    actions.setRunningStep(null)
+                }
+            }
+        },
+        runBatchExportConfigTestStepFailure: () => {
+            values.batchExportConfigTest.steps[values.runningStep].result = {
+                status: 'Failed',
+                message: `The batch export configuration could not be correctly serialized. Required fields may be missing or have invalid values`,
+            }
+            actions.setRunningStep(null)
+        },
         setConfigurationValue: async ({ name, value }) => {
             if (name[0] === 'json_config_file' && value) {
                 try {
@@ -700,5 +776,6 @@ export const pipelineBatchExportConfigurationLogic = kea<pipelineBatchExportConf
 
     afterMount(({ actions }) => {
         actions.loadBatchExportConfig()
+        actions.loadBatchExportConfigTest()
     }),
 ])
