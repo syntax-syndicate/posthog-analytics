@@ -15,8 +15,7 @@ import {
     IconTestTube,
     IconToggle,
 } from '@posthog/icons'
-import { LemonBanner, LemonButton, Link } from '@posthog/lemon-ui'
-import { LemonCollapse } from '@posthog/lemon-ui'
+import { LemonBanner, LemonButton, LemonCollapse, Link } from '@posthog/lemon-ui'
 import { useActions, useValues } from 'kea'
 import { FlaggedFeature } from 'lib/components/FlaggedFeature'
 import { SupportForm } from 'lib/components/Support/SupportForm'
@@ -37,6 +36,7 @@ import { SidePanelPaneHeader } from '../components/SidePanelPaneHeader'
 import { sidePanelStateLogic } from '../sidePanelStateLogic'
 import { MaxChatInterface } from './sidePanelMaxChatInterface'
 import { sidePanelStatusLogic } from './sidePanelStatusLogic'
+
 const PRODUCTS = [
     {
         name: 'Product OS',
@@ -202,12 +202,21 @@ export const SidePanelSupport = (): JSX.Element => {
     const { currentOrganization } = useValues(organizationLogic)
     const { currentTeam } = useValues(teamLogic)
     const { status } = useValues(sidePanelStatusLogic)
+    const { billing } = useValues(billingLogic)
 
     const theLogic = supportLogic({ onClose: () => closeSidePanel(SidePanelTab.Support) })
     const { openEmailForm, closeEmailForm, openMaxChatInterface, closeMaxChatInterface } = useActions(theLogic)
     const { isEmailFormOpen, isMaxChatInterfaceOpen } = useValues(theLogic)
 
     const region = preflight?.region
+
+    // For local development only - remove this in production
+    const isLocalDev = process.env.NODE_ENV === 'development'
+    // Check if user has a paid subscription
+    const canEmailEngineer = billing?.subscription_level !== 'free'
+    // In development, we always show the button regardless of cloud status
+    // In production, we only show it if isCloud is true
+    const showEmailSupport = isLocalDev ? canEmailEngineer : isCloud && canEmailEngineer
 
     return (
         <>
@@ -258,13 +267,15 @@ export const SidePanelSupport = (): JSX.Element => {
                                 </ul>
                             </Section>
 
-                            {status !== 'operational' ? (
+                            {status !== 'operational' && (
                                 <Section title="">
                                     <LemonBanner type={status.includes('outage') ? 'error' : 'warning'}>
                                         <div>
-                                            <span>
-                                                We are experiencing {status.includes('outage') ? 'major' : ''} issues.
-                                            </span>
+                                            {status.includes('outage') ? (
+                                                <span>We are experiencing major issues.</span>
+                                            ) : (
+                                                <span>We are experiencing issues.</span>
+                                            )}
                                             <LemonButton
                                                 type="secondary"
                                                 fullWidth
@@ -278,12 +289,12 @@ export const SidePanelSupport = (): JSX.Element => {
                                         </div>
                                     </LemonBanner>
                                 </Section>
-                            ) : null}
+                            )}
 
                             {isCloud ? (
                                 <FlaggedFeature flag={FEATURE_FLAGS.SUPPORT_SIDEBAR_MAX} match={true}>
                                     <Section title="Ask Max the Hedgehog">
-                                        <>
+                                        <div>
                                             <p>
                                                 Max is PostHog's support AI who can answer support questions, help you
                                                 with troubleshooting, find info in our documentation, write HogQL
@@ -301,12 +312,12 @@ export const SidePanelSupport = (): JSX.Element => {
                                             >
                                                 ✨ Chat with Max
                                             </LemonButton>
-                                        </>
+                                        </div>
                                     </Section>
                                 </FlaggedFeature>
                             ) : null}
 
-                            {isCloud ? (
+                            {showEmailSupport && (
                                 <Section title="Contact us">
                                     <p>Can't find what you need in the docs?</p>
                                     <LemonButton
@@ -320,7 +331,7 @@ export const SidePanelSupport = (): JSX.Element => {
                                         Email our support engineers
                                     </LemonButton>
                                 </Section>
-                            ) : null}
+                            )}
 
                             <Section title="Ask the community">
                                 <p>
