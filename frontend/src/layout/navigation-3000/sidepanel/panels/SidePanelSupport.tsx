@@ -210,7 +210,6 @@ export const SidePanelSupport = (): JSX.Element => {
 
     const region = preflight?.region
 
-    // For local development only - remove this in production
     const isLocalDev = process.env.NODE_ENV === 'development'
     // Check if user has a paid subscription
     const canEmailEngineer = billing?.subscription_level !== 'free'
@@ -317,6 +316,16 @@ export const SidePanelSupport = (): JSX.Element => {
                                 </FlaggedFeature>
                             ) : null}
 
+                            {!showEmailSupport && (
+                                <Section title="">
+                                    <h3>Can't find what you need in the docs?</h3>
+                                    <p>
+                                        With the totally free plan you can ask the community via the link below, or
+                                        explore your upgrade choices for the ability to email a support engineer.
+                                    </p>
+                                </Section>
+                            )}
+
                             {showEmailSupport && (
                                 <Section title="Contact us">
                                     <p>Can't find what you need in the docs?</p>
@@ -340,6 +349,31 @@ export const SidePanelSupport = (): JSX.Element => {
                                     <Link to="https://posthog.com/questions">Ask a question</Link>
                                 </p>
                             </Section>
+
+                            {!showEmailSupport && (
+                                <div className="grid grid-cols-2 border rounded [&_>*]:px-2 [&_>*]:py-0.5 mb-6 bg-surface-primary">
+                                    <div className="col-span-full flex justify-between items-center px-2 py-2 border-b">
+                                        <strong>Avg support response times</strong>
+                                        <div>
+                                            <Link to={urls.organizationBilling([ProductKey.PLATFORM_AND_SUPPORT])}>
+                                                Explore options
+                                            </Link>
+                                        </div>
+                                    </div>
+                                    <div>Totally free</div>
+                                    <div>
+                                        <Link to="https://posthog.com/questions">Community support only</Link>
+                                    </div>
+                                    <div>Ridiculously cheap</div>
+                                    <div>24 hours</div>
+                                    <div>Teams add-on</div>
+                                    <div>12 hours</div>
+                                    <div>Enterprise add-on</div>
+                                    <div>12 hours</div>
+                                    <div>Enterprise</div>
+                                    <div>12 hours</div>
+                                </div>
+                            )}
 
                             <Section title="Share feedback">
                                 <ul>
