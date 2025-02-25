@@ -342,14 +342,6 @@ export const SidePanelSupport = (): JSX.Element => {
                                 </Section>
                             )}
 
-                            <Section title="Ask the community">
-                                <p>
-                                    Questions about features, how-tos, or use cases? There are thousands of discussions
-                                    in our community forums.{' '}
-                                    <Link to="https://posthog.com/questions">Ask a question</Link>
-                                </p>
-                            </Section>
-
                             {!showEmailSupport && (
                                 <div className="grid grid-cols-2 border rounded [&_>*]:px-2 [&_>*]:py-0.5 mb-6 bg-surface-primary">
                                     <div className="col-span-full flex justify-between items-center px-2 py-2 border-b">
@@ -374,6 +366,14 @@ export const SidePanelSupport = (): JSX.Element => {
                                     <div>12 hours</div>
                                 </div>
                             )}
+
+                            <Section title="Ask the community">
+                                <p>
+                                    Questions about features, how-tos, or use cases? There are thousands of discussions
+                                    in our community forums.{' '}
+                                    <Link to="https://posthog.com/questions">Ask a question</Link>
+                                </p>
+                            </Section>
 
                             <Section title="Share feedback">
                                 <ul>
