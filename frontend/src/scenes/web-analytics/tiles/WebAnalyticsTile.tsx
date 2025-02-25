@@ -6,12 +6,13 @@ import { getColorVar } from 'lib/colors'
 import { IntervalFilterStandalone } from 'lib/components/IntervalFilter'
 import { parseAliasToReadable } from 'lib/components/PathCleanFilters/PathCleanFilterItem'
 import { ProductIntroduction } from 'lib/components/ProductIntroduction/ProductIntroduction'
+import { PropertyIcon } from 'lib/components/PropertyIcon'
 import { FEATURE_FLAGS } from 'lib/constants'
 import { IconOpenInNew, IconTrendingDown, IconTrendingFlat } from 'lib/lemon-ui/icons'
 import { LemonButton } from 'lib/lemon-ui/LemonButton'
 import { LemonSwitch } from 'lib/lemon-ui/LemonSwitch'
 import { featureFlagLogic } from 'lib/logic/featureFlagLogic'
-import { percentage, UnexpectedNeverError } from 'lib/utils'
+import { percentage, tryDecodeURIComponent, UnexpectedNeverError } from 'lib/utils'
 import { useCallback, useMemo } from 'react'
 import { NewActionButton } from 'scenes/actions/NewActionButton'
 import { countryCodeToFlag, countryCodeToName } from 'scenes/insights/views/WorldMap'
@@ -194,9 +195,13 @@ const BreakdownValueCell: QueryContextColumnComponent = (props) => {
     switch (breakdownBy) {
         case WebStatsBreakdown.ExitPage:
         case WebStatsBreakdown.InitialPage:
-        case WebStatsBreakdown.Page:
-            return <>{source.doPathCleaning ? parseAliasToReadable(value as string) : value}</>
-
+        case WebStatsBreakdown.Page: {
+            if (typeof value !== 'string') {
+                return <>{value}</>
+            }
+            const decoded = tryDecodeURIComponent(value)
+            return <>{source.doPathCleaning ? parseAliasToReadable(decoded) : decoded}</>
+        }
         case WebStatsBreakdown.Viewport:
             if (Array.isArray(value)) {
                 const [width, height] = value
@@ -255,6 +260,26 @@ const BreakdownValueCell: QueryContextColumnComponent = (props) => {
                         {countryCodeToFlag(parsedCountryCode) ?? languageCodeToFlag(languageCode)}&nbsp;
                         {languageCodeToName[languageCode] || languageCode}
                     </>
+                )
+            }
+            break
+        case WebStatsBreakdown.DeviceType:
+            if (typeof value === 'string') {
+                return (
+                    <div className="flex items-center gap-2">
+                        <PropertyIcon property="$device_type" value={value} />
+                        <span>{value}</span>
+                    </div>
+                )
+            }
+            break
+        case WebStatsBreakdown.Browser:
+            if (typeof value === 'string') {
+                return (
+                    <div className="flex items-center gap-2">
+                        <PropertyIcon property="$browser" value={value} />
+                        <span>{value}</span>
+                    </div>
                 )
             }
             break
