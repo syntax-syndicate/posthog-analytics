@@ -292,7 +292,7 @@ impl Manager {
         &self,
         mut qb: QueryBuilder<'a, Postgres>,
         property_type: PropertyParentType,
-        excluded_properties: &'a Vec<String>,
+        excluded_properties: &'a [String],
     ) -> QueryBuilder<'a, Postgres> {
         // conditionally filter on excluded_properties
         // NOTE: excluded_properties is also passed to the Django API as JSON,
@@ -352,7 +352,7 @@ impl Manager {
     fn conditionally_apply_search_clause<'a>(
         &self,
         mut qb: QueryBuilder<'a, Postgres>,
-        search_terms: &'a Vec<String>,
+        search_terms: &'a [String],
         search_fields: &'a HashSet<String>,
     ) -> QueryBuilder<'a, Postgres> {
         // conditionally apply search term matching; skip this if possible, it's not cheap!
