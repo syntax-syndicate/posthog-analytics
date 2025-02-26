@@ -244,11 +244,9 @@ impl Manager {
 
             // conditionally apply event_names filter
             if filter_by_event_names {
-                if !event_names.is_empty() {
-                    qb.push(" AND event = ANY(");
-                    qb.push_bind(event_names);
-                    qb.push(") ");
-                }
+                qb.push(" AND event = ANY(");
+                qb.push_bind(event_names);
+                qb.push(") ");
             }
 
             // close the JOIN clause and add the JOIN condition
