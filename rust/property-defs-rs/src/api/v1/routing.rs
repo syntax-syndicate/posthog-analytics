@@ -64,12 +64,7 @@ async fn project_property_definitions_handler(
 
     let total_count: i64 = match qmgr.pool.fetch_one(count_query).await {
         Ok(row) => row.get(0),
-        Err(e) => {
-            return Err(ApiError::QueryError(format!(
-                "in count query: {}",
-                e.to_string()
-            )))
-        }
+        Err(e) => return Err(ApiError::QueryError(format!("in count query: {}", e))),
     };
 
     let mut prop_defs = vec![];
@@ -82,12 +77,7 @@ async fn project_property_definitions_handler(
                 prop_defs.push(pd);
             }
         }
-        Err(e) => {
-            return Err(ApiError::QueryError(format!(
-                "in prop defs query: {}",
-                e.to_string()
-            )))
-        }
+        Err(e) => return Err(ApiError::QueryError(format!("in prop defs query: {}", e))),
     }
 
     // TODO: since this is an internal API, and using the incoming URI
