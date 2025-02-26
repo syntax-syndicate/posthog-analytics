@@ -14,7 +14,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use sqlx::{Executor, FromRow, Row};
+use sqlx::{Execute, Executor, FromRow, Postgres, QueryBuilder, Row};
 use tracing::debug;
 use url::form_urlencoded;
 
@@ -49,18 +49,18 @@ async fn project_property_definitions_handler(
     let qmgr: &Manager = &app_ctx.query_manager;
 
     // construct the count query
-    let mut count_query_bldr = qmgr.count_query(project_id, &params);
-    let count_dbg: String = count_query_bldr.sql().into();
-    let count_query = count_query_bldr.build();
+    let mut count_query_bldr = QueryBuilder::<Postgres>::new("");
+    let count_query = qmgr.count_query(&mut count_query_bldr, project_id, &params);
+    let count_dbg: String = count_query.sql().into();
+    debug!("Count query: {:?}", &count_dbg);
 
     // construct the property definitions query
-    let mut props_query_bldr = qmgr.property_definitions_query(project_id, &params);
-    let props_dbg: String = props_query_bldr.sql().into();
-    let props_query = props_query_bldr.build();
-
-    // TODO: temporary, for quick debug in dev as we hone the queries
-    debug!("Count query: {:?}", &count_dbg);
+    let mut props_query_bldr = QueryBuilder::<Postgres>::new("");
+    let props_query = qmgr.property_definitions_query(&mut props_query_bldr, project_id, &params);
+    let props_dbg: String = props_query.sql().into();
     debug!("Prop defs query: {:?}", &props_dbg);
+
+    // TODO: use futures::future::join_all and run these queries in parallel
 
     let total_count: i64 = match qmgr.pool.fetch_one(count_query).await {
         Ok(row) => row.get(0),
