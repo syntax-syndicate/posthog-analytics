@@ -33,7 +33,7 @@ export function ElementInfo(): JSX.Element | null {
             {position ? (
                 <div className="p-3 border-l-[5px] border-l-danger bg-surface-primary text-primary">
                     <h1 className="section-title">Stats</h1>
-                    <p className="">
+                    <p>
                         <IconCalendar /> <u>{dateRange}</u>
                     </p>
                     <div className="grid grid-cols-[auto_1fr] gap-4">
